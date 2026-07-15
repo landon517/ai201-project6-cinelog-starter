@@ -2,6 +2,9 @@
 
 ## AI Usage
 <!-- Fill in at the end — how you used AI tools during this project -->
+I used AI to help with setup and with commands to troubleshoot. I also used it to fix an issue with rebasing. I also summarized
+the files because I wasn't sure on them at first. I used AI to breakdown the git mechanics. I used it to fix a large issue with
+WatchlistEntry that appeared through a rebase.
 
 ## Comment 1 — Rename
 **What I did:**
@@ -65,8 +68,71 @@ That's especially true for a watchlist, since it's forward-looking. People add s
 
 ## Comment 6 — Rebase
 **What conflicted:**
+Running `git rebase origin/main` produced a textual conflict in `.gitignore`,
+non-conflict: main's UUID refactor replaced `models.py` entirely. The `WatchlistEntry` class was never part of main's history so git merged the files without flagging a conflict.  
+
 **How I resolved it:**
+Merged the `.gitignore` lines manually, keeping the union of both versions. I Re-added the class using the post-refactor UUID
+(`db.String(36)`) instead.
+
 **How I verified no conflict remains:**
+Ran `pytest tests/ -v` and all 5 tests passed. Ran `git log --oneline --graph` to confirm no conflicts
+
 
 ## PR Description
 <!-- Written at the end — feature overview, design decisions, manual testing steps -->
+![git log](picproj6.png)
+
+
+### What this feature does
+Adds a watchlist feature to CineLog, letting users save films they want
+to watch later. Includes a new `WatchlistEntry` model UUID-based and a `get_watchlist()` function that returns a user's saved films.
+
+### Design decisions
+**Default visibility:** Watchlists default to `public=True`, optimizing
+for discovery and social engagement. This trades off some privacy, since a watchlist can reveal personal taste or
+interests, but the exposure is limited enough that the social upside outweighs it.
+
+**Sort order:** Watchlists are sorted by date added, newest first. This surfaces what a user most recently found
+interesting, matching the forward-looking nature of a watchlist.
+
+### How to manually test
+**Setup**
+1. Start the app: `python app.py`
+2. Create a test user and a test film via Python shell, seed script
+
+**Test 1: Add a film to the watchlist**
+```bash
+curl -X POST http://127.0.0.1:5000/watchlist/<user_id>/add \
+  -H "Content-Type: application/json" \
+  -d '{"film_id": "<film_id>"}'
+# Expected: 201 response with the new watchlist entry as JSON
+```
+
+**Test 2: View the watchlist**
+```bash
+curl http://127.0.0.1:5000/watchlist/<user_id>
+# Expected: JSON list containing the film added above, sorted newest-added first
+```
+
+**Test 3: Try adding the same film twice**
+```bash
+curl -X POST http://127.0.0.1:5000/watchlist/<user_id>/add \
+  -H "Content-Type: application/json" \
+  -d '{"film_id": "<film_id>"}'
+# Expected: AlreadyInWatchlistError isn't caught at the route level yet,
+```
+
+**Test 4: Try adding a film that doesn't exist**
+```bash
+curl -X POST http://127.0.0.1:5000/watchlist/<user_id>/add \
+  -H "Content-Type: application/json" \
+  -d '{"film_id": "00000000-0000-0000-0000-000000000000"}'
+# Expected: same situation as Test 3 where FilmNotFoundError isn't caught at the route level
+```
+
+**Test 5: Run the automated suite**
+```bash
+pytest tests/ -v
+# Expected: all 5 tests pass
+```
