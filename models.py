@@ -59,6 +59,8 @@ class CollectionEntry(db.Model):
     date_added = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     rating = db.Column(db.Integer, nullable=True)  # 1–5, optional
 
+
+
     __table_args__ = (
         db.UniqueConstraint("user_id", "film_id", name="unique_user_film_collection"),
     )
@@ -70,4 +72,21 @@ class CollectionEntry(db.Model):
             "film_id": self.film_id,
             "date_added": self.date_added.isoformat(),
             "rating": self.rating,
+        }
+
+class WatchlistEntry(db.Model):
+    """Represents a film a user wants to watch (saved for later)."""
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    user_id = db.Column(db.String(36), db.ForeignKey("user.id"), nullable=False)
+    film_id = db.Column(db.String(36), db.ForeignKey("film.id"), nullable=False)
+    date_added = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    public = db.Column(db.Boolean, default=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "film_id": self.film_id,
+            "date_added": self.date_added.isoformat(),
+            "public": self.public,
         }
